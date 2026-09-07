@@ -8537,7 +8537,13 @@ async fn search_book_multi_sse(
             let ns = ns.clone();
             let storage = storage.clone();
             let source = sources[i].clone();
+            let ramp_ms = (i - start) as u64 * 150;
             tasks.push(Box::pin(async move {
+                // 错峰斜坡: 避免整窗瞬时并发壅塞家庭出口(实测 50 并发首事件 30s),
+                // 同时让排名靠后的源尽早进入在飞集合(免轮次边界等待)
+                if ramp_ms > 0 {
+                    tokio::time::sleep(std::time::Duration::from_millis(ramp_ms)).await;
+                }
                 let _permit = sem.acquire().await;
                 let t0 = std::time::Instant::now();
                 let res =
