@@ -5,6 +5,7 @@ import { TtsPreferencesCard } from "@/components/settings/TtsPreferencesCard";
 import { WebdavPanel } from "@/components/settings/WebdavPanel";
 import { PageIntro, SettingCard, SettingRow } from "@/components/ui";
 import { getSystemInfo } from "@/services/auth";
+import { useSettingsStore } from "@/stores/settings-store";
 import { version as appVersion } from "../../package.json";
 
 /** 秒 → 「N 天 N 小时」 / 「N 小时 N 分」 / 「N 分 N 秒」 / 「N 秒」 */
@@ -29,6 +30,8 @@ function formatUptime(totalSeconds: number): string {
  * 设置页: 阅读偏好 + 朗读与音色 (独立卡) + 数据与备份 (WebDAV) + 关于.
  */
 export default function SettingsPage() {
+  const searchTimeout = useSettingsStore((state) => state.searchTimeout);
+  const setSearchTimeout = useSettingsStore((state) => state.setSearchTimeout);
   const systemQuery = useQuery({
     queryKey: ["systemInfo"],
     queryFn: () => getSystemInfo(),
@@ -47,6 +50,18 @@ export default function SettingsPage() {
       />
       <div className="grid items-start gap-5 lg:grid-cols-2">
         <div className="flex flex-col gap-5">
+          <SettingCard title="搜索" desc="多源搜索运行时参数, 保存即生效">
+            <SettingRow label="单源搜索超时" value="秒 (3-60): 慢源站响应慢时调高, 想快速跳过慢源调低">
+              <input
+                type="number"
+                min={3}
+                max={60}
+                value={searchTimeout}
+                onChange={(event) => setSearchTimeout(Number(event.target.value))}
+                className="w-24 rounded-md border border-border bg-background px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+              />
+            </SettingRow>
+          </SettingCard>
           <ReadingPreferencesCard />
           <TtsPreferencesCard />
         </div>

@@ -2427,6 +2427,9 @@ async fn search_book(
         Ok(ns) => ns,
         Err(ret) => return Json(ret),
     };
+    let body_json = body
+        .as_ref()
+        .and_then(|b| serde_json::from_slice::<serde_json::Value>(b).ok());
     // GAP #58：secure 模式下书源功能未开启 → 拒绝
     if let Err(ret) = require_book_source_permission(&state, &namespace).await {
         return Json(ret);
@@ -2480,7 +2483,14 @@ async fn search_book(
         return Json(ReturnData::err("书源不存在"));
     };
 
-    match crate::service::search::search_one_source(&state.storage, &namespace, &source, &key, page)
+    match crate::service::search::search_one_source(
+        &state.storage,
+        &namespace,
+        &source,
+        &key,
+        page,
+        search_timeout_param(&params, body_json.as_ref()),
+    )
         .await
     {
         Ok(books) => {
@@ -2513,6 +2523,9 @@ async fn search_book_multi(
         Ok(ns) => ns,
         Err(ret) => return Json(ret),
     };
+    let body_json = body
+        .as_ref()
+        .and_then(|b| serde_json::from_slice::<serde_json::Value>(b).ok());
     // GAP #58：secure 模式下书源功能未开启 → 拒绝
     if let Err(ret) = require_book_source_permission(&state, &namespace).await {
         return Json(ret);
@@ -2623,6 +2636,7 @@ async fn search_book_multi(
 
     // 并发搜索（限制并发数 24——多书源场景下 8 并发会明显拖慢整批搜索）
     let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(24));
+    let timeout_secs = search_timeout_param(&params, body_json.as_ref());
     let mut handles = Vec::with_capacity(sources.len());
     let ns = namespace.clone();
     let storage = state.storage.clone();
@@ -2635,7 +2649,14 @@ async fn search_book_multi(
             let _permit = sem.acquire().await;
             let t0 = std::time::Instant::now();
             let res =
-                crate::service::search::search_one_source(&storage, &ns, &source, &key, page)
+                crate::service::search::search_one_source(
+                    &storage,
+                    &ns,
+                    &source,
+                    &key,
+                    page,
+                    timeout_secs,
+                )
                     .await;
             let lat = t0.elapsed().as_millis() as i64;
             let (ok, intro_hits, intro_count) = match &res {
@@ -2840,7 +2861,7 @@ async fn search_book_source(
         let source = source.clone();
         handles.push(tokio::spawn(async move {
             let _permit = sem.acquire().await;
-            crate::service::search::search_one_source(&storage, &ns, &source, &key, 1)
+            crate::service::search::search_one_source(&storage, &ns, &source, &key, 1, 15)
                 .await
                 .unwrap_or_default()
         }));
@@ -5675,7 +5696,7 @@ async fn get_available_book_source(
         let storage = storage.clone();
         handles.push(tokio::spawn(async move {
             let _permit = sem.acquire().await;
-            crate::service::search::search_one_source(&storage, &ns, &source, &key, 1)
+            crate::service::search::search_one_source(&storage, &ns, &source, &key, 1, 15)
                 .await
                 .unwrap_or_default()
         }));
@@ -6051,7 +6072,7 @@ async fn search_book_source_sse(
                 let _permit = sem.acquire().await;
                 let t0 = std::time::Instant::now();
                 let res =
-                    crate::service::search::search_one_source(&storage, &ns, &source, &key, 1)
+                    crate::service::search::search_one_source(&storage, &ns, &source, &key, 1, 15)
                         .await;
                 let lat = t0.elapsed().as_millis() as i64;
                 let (ok, intro_hits, intro_count) = match &res {
@@ -8518,6 +8539,7 @@ async fn search_book_multi_sse(
     }
     search_size = search_size.max(1);
     let concurrent_count = effective_concurrent_count(concurrent_count);
+    let timeout_secs = search_timeout_param(&params, body_json.as_ref());
 
     let (tx, rx) = tokio::sync::mpsc::channel::<Result<Bytes, std::convert::Infallible>>(
         concurrent_count.min(64).max(4),
@@ -8547,7 +8569,7 @@ async fn search_book_multi_sse(
                 let _permit = sem.acquire().await;
                 let t0 = std::time::Instant::now();
                 let res =
-                    crate::service::search::search_one_source(&storage, &ns, &source, &key, 1)
+                    crate::service::search::search_one_source(&storage, &ns, &source, &key, 1, timeout_secs)
                         .await;
                 let lat = t0.elapsed().as_millis() as i64;
                 let (ok, intro_hits, intro_count) = match &res {
@@ -8619,6 +8641,12 @@ async fn search_book_multi_sse(
         .header("Cache-Control", "no-cache")
         .body(Body::from_stream(stream))
         .unwrap()
+}
+
+/// 搜索单源超时(秒): 前端设置项运行时下发, clamp 3..60, 缺省 15
+fn search_timeout_param(params: &HashMap<String, String>, body_json: Option<&serde_json::Value>) -> u64 {
+    let raw = param_of(params, body_json, "timeout").parse::<i64>().unwrap_or(15);
+    raw.clamp(3, 60) as u64
 }
 
 /// SSE 错误事件（兼容 legacy：event: error + data: ReturnData）

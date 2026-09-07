@@ -568,6 +568,7 @@ pub async fn search_one_source(
     source: &BookSource,
     key: &str,
     page: i64,
+    timeout_secs: u64,
 ) -> Result<Vec<SearchBook>> {
     // F2/EG5 配套：600s 内已标记失效的书源跳过请求
     if crate::service::health::is_source_invalid(ns, source.book_source_url.as_str()) {
@@ -707,7 +708,7 @@ async fn search_one_source_impl(
                         ns,
                         &url,
                         &req_headers,
-                        15,
+                        timeout_secs,
                         suffix.charset.as_deref(),
                         source.proxy_url.as_deref(),
                         suffix.retry,
@@ -733,7 +734,7 @@ async fn search_one_source_impl(
             ns,
             &url,
             &req_headers,
-            15,
+            timeout_secs,
             suffix.charset.as_deref(),
             source.proxy_url.as_deref(),
             suffix.retry,

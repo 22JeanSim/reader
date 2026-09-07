@@ -6,6 +6,7 @@ import { stripNullsDeep } from "@/lib/api-client";
 import { connectSSE } from "@/lib/sse";
 import { searchSSEBatchSchema } from "@/services/search";
 import { getBookSourcesLite } from "@/services/sources";
+import { useSettingsStore } from "@/stores/settings-store";
 import type { SearchBook } from "@/types/api";
 /** 简介补全跨搜索缓存: 同一本书不重复回源 (搜索规则缺 intro 是源侧常态) */
 const introCache = new Map<string, string>();
@@ -278,7 +279,14 @@ export function useSearchSSE(): UseSearchSSEResult {
 
     cancelRef.current = connectSSE(
       "/reader3/searchBookMultiSSE",
-      { key, lastIndex: fromIndex, concurrentCount, searchSize: SEARCH_WINDOW },
+      {
+        key,
+        lastIndex: fromIndex,
+        concurrentCount,
+        searchSize: SEARCH_WINDOW,
+        // 运行时超时(设置页即时保存): 后端 clamp 3..60
+        timeout: useSettingsStore.getState().searchTimeout,
+      },
       {
         onData: (payload) => {
           // warp serde 对 SearchBook 的 Option 字段显式输出 null, 先归一再进 zod

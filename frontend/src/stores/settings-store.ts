@@ -62,6 +62,8 @@ export interface SettingsState {
   ttsAutoNext: boolean;
   /** 读到章末自动后台预热缓存后续章节 (源站失效后仍可读) */
   preheatOnChapterEnd: boolean;
+  /** 单源搜索超时秒(3-60): 运行时下发后端, 即时保存生效, 调参无需重新构建 */
+  searchTimeout: number;
   /** 加入书架/导入后自动后台预热整书, 把首开抓取前移 (默认开) */
   preheatOnAdd: boolean;
   setTheme: (theme: ThemeMode) => void;
@@ -83,6 +85,7 @@ export interface SettingsState {
   setTtsAutoNext: (ttsAutoNext: boolean) => void;
   setPreheatOnChapterEnd: (preheatOnChapterEnd: boolean) => void;
   setPreheatOnAdd: (preheatOnAdd: boolean) => void;
+  setSearchTimeout: (searchTimeout: number) => void;
 }
 
 /** 可持久化的设置数据(不含 setter) */
@@ -109,6 +112,7 @@ export const defaultSettings: SettingsData = {
   ttsAutoNext: true,
   preheatOnChapterEnd: false,
   preheatOnAdd: true,
+  searchTimeout: 15,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -204,6 +208,10 @@ export const useSettingsStore = create<SettingsState>()(
       },
       setPreheatOnAdd: (preheatOnAdd) => {
         set({ preheatOnAdd });
+      },
+
+      setSearchTimeout: (searchTimeout) => {
+        set({ searchTimeout: Math.min(Math.max(Math.round(searchTimeout), 3), 60) });
       },
 
     }),
