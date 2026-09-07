@@ -6,8 +6,10 @@ import type { BookSource } from "@/types/api";
 
 export interface SourceListItemProps {
   source: BookSource;
-  /** 是否被后端短期缓存标记为失效 */
+  /** 是否被后端短期缓存标记为失效(近 10 分钟失败) */
   invalid: boolean;
+  /** 长期统计失效(尝试≥5 且成功率<20%): 与 invalid 同显「失效」徽标 */
+  dead?: boolean;
   /** 本行启用开关的忙碌态(切换请求进行中) */
   busy: boolean;
   /** 置信度统计 (搜索排序依据); 尝试次数过少不显示徽标 */
@@ -36,6 +38,7 @@ const TYPE_LABEL: Record<number, string> = { 0: "文本", 1: "音频" };
 export function SourceListItem({
   source,
   invalid,
+  dead,
   busy,
   stat,
   selectMode = false,
@@ -83,12 +86,12 @@ export function SourceListItem({
           <Badge size="sm" variant="muted" className="shrink-0 bg-secondary text-foreground">
             {TYPE_LABEL[source.bookSourceType] ?? `类型${source.bookSourceType}`}
           </Badge>
-          {invalid ? (
-            onInvalidClick !== undefined ? (
+          {invalid || dead ? (
+            invalid && onInvalidClick !== undefined ? (
               <button
                 type="button"
                 className="shrink-0 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
-                title="查看失效原因"
+                title={invalid ? "查看失效原因" : "长期统计失效: 尝试≥5 且成功率<20%"}
                 onClick={() => onInvalidClick(source)}
               >
                 <Badge size="sm" variant="danger">

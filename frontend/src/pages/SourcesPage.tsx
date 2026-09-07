@@ -74,6 +74,19 @@ export default function SourcesPage() {
     return map;
   }, [statsQuery.data]);
   /** 清理目标: 尝试≥5 且成功率<20% 的启用源 (置信度已被服务端压到 0.05 档) */
+  /** 长期统计失效 url 集: 与清理目标同口径(含已禁用源, 供徽标) */
+  const deadUrls = React.useMemo(
+    () =>
+      new Set(
+        sources
+          .filter((source) => {
+            const stat = statMap.get(source.bookSourceUrl);
+            return stat !== undefined && stat.attempts >= 5 && stat.successRate < 0.2;
+          })
+          .map((source) => source.bookSourceUrl),
+      ),
+    [sources, statMap],
+  );
   const cleanupTargets = React.useMemo(
     () =>
       sources.filter((source) => {
@@ -85,7 +98,7 @@ export default function SourcesPage() {
   const cleanup = useMutation({
     mutationFn: () => saveBookSources(cleanupTargets.map((source) => ({ ...source, enabled: false }))),
     onSuccess: () => {
-      toast.success(`已禁用 ${cleanupTargets.length} 个无效源 (可随时启用恢复)`);
+      toast.success(`已禁用 ${cleanupTargets.length} 个失效源 (可随时启用恢复)`);
       setCleanupOpen(false);
       void queryClient.invalidateQueries({ queryKey: SOURCES_QUERY_KEY });
       void queryClient.invalidateQueries({ queryKey: SOURCE_STATS_QUERY_KEY });
@@ -150,7 +163,7 @@ export default function SourcesPage() {
     const base = filterSources(sources, currentGroup, keyword);
     let list = base;
     if (statusFilter === "invalid") {
-      list = base.filter((source) => invalidUrls.has(source.bookSourceUrl));
+      list = base.filter((source) => invalidUrls.has(source.bookSourceUrl) || deadUrls.has(source.bookSourceUrl));
     } else if (statusFilter === "premium") {
       list = base.filter((source) => premiumSet.has(source.bookSourceUrl));
     } else if (statusFilter === "poor") {
@@ -263,7 +276,7 @@ export default function SourcesPage() {
               onClick={() => setCleanupOpen(true)}
             >
               <Trash2 aria-hidden />
-              清理无效源{cleanupTargets.length > 0 ? ` ${cleanupTargets.length}` : ""}
+              清理失效源{cleanupTargets.length > 0 ? ` ${cleanupTargets.length}` : ""}
             </Button>
             <Button size="sm" onClick={() => setImportOpen(true)}>
               <Download aria-hidden />
@@ -468,6 +481,7 @@ export default function SourcesPage() {
                   key={source.bookSourceUrl}
                   source={source}
                   invalid={invalidUrls.has(source.bookSourceUrl)}
+                  dead={deadUrls.has(source.bookSourceUrl)}
                   stat={statMap.get(source.bookSourceUrl)}
                   selectMode={selectMode}
                   selected={selected.has(source.bookSourceUrl)}
@@ -523,7 +537,7 @@ export default function SourcesPage() {
       <Dialog open={cleanupOpen} onOpenChange={setCleanupOpen}>
         <DialogContent width="sm">
           <DialogHeader>
-            <DialogTitle>清理无效源</DialogTitle>
+            <DialogTitle>清理失效源</DialogTitle>
             <DialogDescription>
               以下 {cleanupTargets.length} 个源搜索尝试≥5 次且成功率&lt;20% (置信度已垫底),
               禁用后不再参与搜索排序与轮次; 随时可在列表重新启用.
