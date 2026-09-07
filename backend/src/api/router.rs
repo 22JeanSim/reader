@@ -8385,7 +8385,11 @@ async fn explore_book(
                 .and_then(|b| b.get("page").and_then(|v| v.as_i64()))
         })
         .unwrap_or(1);
-    let bs_param = param_of(&params, body_json.as_ref(), "bookSource");
+    // 兼容两种参数名: 历史前端误发 bookSourceUrl, 探索全部落回默认源(书海全空根因)
+    let mut bs_param = param_of(&params, body_json.as_ref(), "bookSource");
+    if bs_param.is_empty() {
+        bs_param = param_of(&params, body_json.as_ref(), "bookSourceUrl");
+    }
     let Some(source) = resolve_book_source(&state, &namespace, &bs_param).await else {
         return Json(ReturnData::err("书源不存在"));
     };
