@@ -20,6 +20,8 @@ services:
       # 书源抓取允许内网地址 (本地书同步/TTS 网关等)
       SSRF_ALLOW_PRIVATE: "true"
       READER_BROWSER_FIRST: "0"
+      # secure 模式开关 (登录/书源权限校验)
+      READER_APP_SECURE: "true"
       TZ: Asia/Shanghai
     restart: unless-stopped
 
