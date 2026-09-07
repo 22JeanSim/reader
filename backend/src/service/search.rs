@@ -641,7 +641,10 @@ async fn search_one_source_impl(
     )?;
 
     // 3) 并发率：共享滑窗/最小间隔限速（A2——替代原 per-call sleep）
-    concurrent_rate_acquire(ns, source).await;
+
+    // 搜索路径不限流: 跨关键词间隔等待是新词首结果 30-50s 的主因;
+    // 同键重复已由 search_cache 回放覆盖, 书源防封由并发窗口(64)与超时兜底.
+    // 目录/正文/详情仍走 fetch_url 内的限流.
 
     // 附加 headers（书源 header + 后缀 headers 合并）
     let mut req_headers = headers.clone();
