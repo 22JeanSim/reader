@@ -7,7 +7,7 @@
 # ============================================================
 
 # ---------- 阶段 1：前端构建 (React) ----------
-FROM node:20-slim AS web
+FROM node:22-slim AS web
 WORKDIR /web
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 RUN npm i -g pnpm@11 && pnpm fetch --frozen-lockfile
