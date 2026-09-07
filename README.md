@@ -226,6 +226,32 @@ Dockerfile  根上下文多阶段: pnpm build → cargo release → camoufox →
 
 ---
 
+## 界面
+
+一张海报看全貌(上排 PC 1440×900 · 下排移动 390×844):
+
+![reader 界面海报](docs/images/poster.webp)
+
+### PC 端
+
+| 书架(网格/分组/未读角标) | 多源搜索(SSE 流式·关键词高亮) |
+|---|---|
+| ![pc-shelf](docs/images/pc-shelf.webp) | ![pc-search](docs/images/pc-search.webp) |
+| **详情与章节目录(多源徽标·换源)** | **阅读器(主题·批注·TTS·沉浸)** |
+| ![pc-detail](docs/images/pc-detail.webp) | ![pc-reader](docs/images/pc-reader.webp) |
+
+书源治理页(置信度/成功率/延迟):
+
+![pc-sources](docs/images/pc-sources.webp)
+
+### 移动端
+
+| 书架 | 搜索 | 详情 | 阅读器 |
+|---|---|---|---|
+| ![m-shelf](docs/images/mobile-shelf.webp) | ![m-search](docs/images/mobile-search.webp) | ![m-detail](docs/images/mobile-detail.webp) | ![m-reader](docs/images/mobile-reader.webp) |
+
+---
+
 ## 致谢
 
 - [legado](https://github.com/gedoor/legado): 书源规则语义与生态
