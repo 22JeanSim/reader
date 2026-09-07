@@ -239,12 +239,20 @@ export function useTts(options: UseTtsOptions): UseTtsResult {
     }
     return gatewayStatus?.auto ?? "";
   }, [provider, gatewayStatus]);
-  // edge-tts 音色仅保留中文(其余语言用不上, 列表精简): 按语音名前缀 zh- 过滤
+  // 音色列表按引擎只留中文(其余语言用不上): edge 用 zh- 前缀, kokoro 用 zf_/zm_ 或「中文」名;
+  // 其他引擎不过滤 (此前一刀切 zh- 把 kokoro 音色全滤空导致无声)
   const gatewayVoicesAll = useTtsGatewayVoices(gatewayUrl, resolvedEngine).data ?? EMPTY_GATEWAY_VOICES;
-  const gatewayVoices = useMemo(
-    () => gatewayVoicesAll.filter((v) => v.name.startsWith("zh-") || v.id.startsWith("zh-")),
-    [gatewayVoicesAll],
-  );
+  const gatewayVoices = useMemo(() => {
+    if (resolvedEngine === "edge") {
+      return gatewayVoicesAll.filter((v) => v.id.startsWith("zh-") || v.name.startsWith("zh-"));
+    }
+    if (resolvedEngine === "kokoro") {
+      return gatewayVoicesAll.filter(
+        (v) => v.id.startsWith("zf_") || v.id.startsWith("zm_") || v.name.startsWith("中文"),
+      );
+    }
+    return gatewayVoicesAll;
+  }, [gatewayVoicesAll, resolvedEngine]);
   const resolvedEngineName = useMemo(() => {
     if (resolvedEngine === "") {
       return "";
