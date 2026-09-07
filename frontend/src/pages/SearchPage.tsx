@@ -221,7 +221,7 @@ export default function SearchPage() {
         />
 
         {/* 搜索栏吸附在内容区顶部: 长结果列表里随时可以换词重搜 */}
-        <div className="sticky top-16 z-30 -mx-4 mb-6 border-b border-border/70 bg-background/90 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:-mx-10 md:px-10">
+        <div className="sticky top-0 z-30 -mx-4 mb-6 border-b border-border/70 bg-background/90 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:-mx-10 md:px-10">
           <SearchBar
             value={keyword}
             onChange={setKeyword}
