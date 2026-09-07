@@ -230,17 +230,21 @@ pub async fn explore_url(
 ) -> Result<Vec<SearchBook>> {
     // URL 模板（{{page}}/{page}）→ 页码
     let url = build_explore_url(url, page);
-    // 相对 URL 拼书源 baseUrl
-    let raw_url = if url.starts_with('/') && !url.starts_with("//") {
+    // 相对 URL 拼书源 baseUrl (legado 语义: 带/前缀与不带前缀的相对路径都要绝对化)
+    let raw_url = if url.starts_with("http://") || url.starts_with("https://") || url.starts_with("//") {
+        url.to_string()
+    } else {
         let base = source
             .book_source_url
             .split("##")
             .next()
             .unwrap_or("")
             .trim_end_matches('/');
-        format!("{base}{url}")
-    } else {
-        url.to_string()
+        if url.starts_with('/') {
+            format!("{base}{url}")
+        } else {
+            format!("{base}/{url}")
+        }
     };
     // URL 后缀（,{...}：charset/method/body——对齐搜索链路）
     let (final_url, suffix) = crate::service::search::split_url_suffix(&raw_url);
