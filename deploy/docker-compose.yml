@@ -1,0 +1,27 @@
+# reader 生产 compose: 镜像来自 GHCR (GitHub Actions 构建推送)
+# 部署: cd deploy && GHCR_PAT=xxx ./pull-deploy.sh
+name: reader
+
+services:
+  reader:
+    image: ghcr.io/hehecat/reader:latest
+    container_name: reader
+    ports:
+      - "4396:8080"
+    volumes:
+      # 用户数据/书架/缓存 sqlite 所在 (READER_APP_WORKDIR=/storage)
+      - /home/reader/storage:/storage/storage
+      # 容器内 /data (mongo 遗留/杂项), 命名 volume 便于备份
+      - data:/data
+    env_file: .env
+    environment:
+      READER_APP_WORKDIR: /storage
+      READER_APP_WEB_ROOT: /app/web-ui/dist
+      # 书源抓取允许内网地址 (本地书同步/TTS 网关等)
+      SSRF_ALLOW_PRIVATE: "true"
+      READER_BROWSER_FIRST: "0"
+      TZ: Asia/Shanghai
+    restart: unless-stopped
+
+volumes:
+  data:

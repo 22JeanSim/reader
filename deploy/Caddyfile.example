@@ -1,0 +1,58 @@
+# 宿主 caddy 参考配置 (生产反代两层: 外层 TLS 容器 :8888 → 宿主 caddy :8080 → 容器 4396)
+# 关键点:
+#   1. SSE 流式接口绝不压缩 (gzip/zstd 会缓冲 event-stream 致搜索流卡死)
+#   2. /reader3/* 反代必须 flush_interval -1
+#   3. 用户封面 /assets/<ns>/covers/* 走后端且长缓存 (文件名即 md5)
+#   4. 哈希静态资源长缓存; index.html 走 no-cache 保证发版即时生效
+:8080 {
+	root * /home/hehecat/code/reader/deploy/web-dist
+	@notsse not path /reader3/searchBookMultiSSE /reader3/searchBookSourceSSE
+	encode @notsse gzip zstd
+
+	# SSE 流式接口禁用缓冲
+	handle /reader3/* {
+		reverse_proxy 127.0.0.1:4396 {
+			flush_interval -1
+		}
+	}
+
+	# TTS 网关同源代理 (独立宿主服务)
+	handle_path /tts-gateway/* {
+		reverse_proxy 127.0.0.1:9912
+	}
+
+	# 后端图片代理 (http 图床防盗链缓存)
+	handle /assets/proxy {
+		reverse_proxy 127.0.0.1:4396
+	}
+
+	# 用户命名空间封面: 后端服务 + 长缓存 (先删后端自带头避免双 Cache-Control)
+	handle /assets/*/covers/* {
+		header -Cache-Control
+		header Cache-Control "public, max-age=31536000, immutable"
+		reverse_proxy 127.0.0.1:4396
+	}
+
+	# 哈希资源长缓存
+	handle /assets/* {
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# SPA history 回退; index.html 每次协商
+	handle {
+		try_files {path} /index.html
+		header Cache-Control "no-cache"
+		file_server
+	}
+}
+
+# 外层 TLS 站点块参考 (通配证书显式加载, auto_https disable_certs 全局):
+# reader.example.win:8888 {
+#     tls /data/caddy/certificates/.../wildcard_.example.win.crt /data/caddy/.../wildcard_.example.win.key
+#     @notsse not path /reader3/searchBookMultiSSE /reader3/searchBookSourceSSE
+#     encode @notsse zstd gzip
+#     reverse_proxy http://<宿主LAN IP>:8080 {
+#         flush_interval -1
+#     }
+# }

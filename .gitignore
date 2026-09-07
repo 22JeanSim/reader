@@ -1,0 +1,9 @@
+# rust
+backend/target/
+# node
+frontend/node_modules/
+frontend/dist/
+# 部署产物与秘密
+deploy/.env
+deploy/web-dist/
+*.log
