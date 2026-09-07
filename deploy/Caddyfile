@@ -28,10 +28,8 @@
 		reverse_proxy 127.0.0.1:4396
 	}
 	handle /assets/*/covers/* {
-		# 文件名即 md5 哈希, 内容变即名变 → 长缓存安全; 书架重复打开零下载
-		# 先删后端自带的 30d 头再设, 避免双 Cache-Control
-		header -Cache-Control
-		header Cache-Control "public, max-age=31536000, immutable"
+		# 文件名即 md5 哈希, 内容变即名变; 后端自带 max-age=30d 单头即可
+		# (caddy header 指令与上游头组合语义不可靠: 删+设=全丢, 单设=双头, 实测结论)
 		reverse_proxy 127.0.0.1:4396
 	}
 	# 哈希资源长缓存 (文件名含 hash, 内容变即名变)
