@@ -29,11 +29,11 @@ const GRID_CLASS =
 const TOC_PROBE_KEY = "reader.tocprobe.v1";
 const TOC_PROBE_TTL_MS = 7 * 24 * 3600 * 1000;
 const tocProbeKey = (bookUrl: string, origin: string): string => `${bookUrl}|${origin}`;
-function loadTocProbeCache(): Record<string, { n: number; t: number }> {
+function loadTocProbeCache(): Record<string, { n: number; t: number; latest?: string }> {
   try {
     const raw = JSON.parse(localStorage.getItem(TOC_PROBE_KEY) ?? "{}") as Record<
       string,
-      { n: number; t: number }
+      { n: number; t: number; latest?: string }
     >;
     return raw !== null && typeof raw === "object" ? raw : {};
   } catch {
@@ -192,18 +192,18 @@ export default function SearchPage() {
   /** 隐藏无章节结果: 后台并发 3 探针校验目录, 0 章即隐藏; 探针缓存 7 天 */
   const hideEmptyToc = useSettingsStore((state) => state.hideEmptyTocResults);
   const [emptyTocKeys, setEmptyTocKeys] = useState<ReadonlySet<string>>(() => new Set());
-  const tocProbeCache = useRef<Record<string, { n: number; t: number }> | null>(null);
+  const tocProbeCache = useRef<Record<string, { n: number; t: number; latest?: string }> | null>(null);
+  /** 探针末章回填: 搜索规则不给 lastChapter 的源, 用目录末章补「最新」行 */
+  const [probeLatest, setProbeLatest] = useState<Readonly<Record<string, string>>>({});
   if (tocProbeCache.current === null) {
     tocProbeCache.current = loadTocProbeCache();
   }
   useEffect(() => {
-    if (!hideEmptyToc) {
-      setEmptyTocKeys(new Set());
-      return;
-    }
+    // 探针始终跑(末章回填需要); 隐藏行为由开关控制
     const cache = tocProbeCache.current ?? {};
     const now = Date.now();
     const cachedEmpty = new Set<string>();
+    const cachedLatest: Record<string, string> = {};
     const queue: SearchBook[] = [];
     for (const book of results) {
       const key = tocProbeKey(book.bookUrl, book.origin);
@@ -212,13 +212,17 @@ export default function SearchPage() {
         if (hit.n === 0) {
           cachedEmpty.add(key);
         }
+        if (hit.latest !== undefined && hit.latest.length > 0) {
+          cachedLatest[key] = hit.latest;
+        }
         continue;
       }
       if (queue.length < 60) {
         queue.push(book);
       }
     }
-    setEmptyTocKeys(cachedEmpty);
+    setEmptyTocKeys(hideEmptyToc ? cachedEmpty : new Set());
+    setProbeLatest(cachedLatest);
     if (queue.length === 0) {
       return;
     }
@@ -242,9 +246,12 @@ export default function SearchPage() {
             if (cancelled) {
               return;
             }
-            cache[key] = { n: chapters.length, t: Date.now() };
+            const latest = chapters.length > 0 ? (chapters[chapters.length - 1]?.title ?? "").trim() : "";
+            cache[key] = { n: chapters.length, t: Date.now(), latest };
             if (chapters.length === 0) {
               setEmptyTocKeys((prev) => (prev.has(key) ? prev : new Set([...prev, key])));
+            } else if (latest.length > 0) {
+              setProbeLatest((prev) => ({ ...prev, [key]: latest }));
             }
           })
           .catch(() => undefined)
@@ -266,10 +273,20 @@ export default function SearchPage() {
   }, [results, hideEmptyToc]);
   const visibleResults = useMemo(
     () =>
-      hideEmptyToc
+      (hideEmptyToc
         ? results.filter((book) => !emptyTocKeys.has(tocProbeKey(book.bookUrl, book.origin)))
-        : results,
-    [results, emptyTocKeys, hideEmptyToc],
+        : results
+      ).map((book) => {
+        const trimmed = (book.latestChapterTitle ?? "").trim();
+        if (trimmed.length > 0) {
+          return book;
+        }
+        const latest = probeLatest[tocProbeKey(book.bookUrl, book.origin)];
+        return latest !== undefined && latest.length > 0
+          ? { ...book, latestChapterTitle: latest }
+          : book;
+      }),
+    [results, emptyTocKeys, hideEmptyToc, probeLatest],
   );
 
   const initial = q.length === 0 && !searching && results.length === 0 && error === null;

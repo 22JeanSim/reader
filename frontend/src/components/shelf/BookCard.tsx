@@ -77,9 +77,10 @@ export function BookCard({
   const canMarkRead = book.totalChapterNum > 0 && unread > 0;
   const chapter = book.durChapterTitle?.trim();
   /** 阅读进度文案: 读至章节名/序号 + 总章数; 未读开时退化为最新章节 */
+  // 章节名常超长被截断: 卡片只用序号(短且对齐), 章节名在详情弹窗看
   const progressText =
     book.totalChapterNum > 0
-      ? `读至 ${chapter || `第 ${book.durChapterIndex + 1} 章`} · 共 ${book.totalChapterNum} 章`
+      ? `读至第 ${book.durChapterIndex + 1} 章 · 共 ${book.totalChapterNum} 章`
       : (book.latestChapterTitle?.trim() ? `最新 ${book.latestChapterTitle.trim()}` : "");
   const intro = (book.customIntro ?? book.intro ?? "").trim();
   const groupNames = groups === undefined ? [] : bookGroupNames(book, groups);
