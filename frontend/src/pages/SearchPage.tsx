@@ -215,8 +215,9 @@ export default function SearchPage() {
         if (hit.latest !== undefined && hit.latest.length > 0) {
           cachedLatest[key] = hit.latest;
         }
-        continue;
       }
+      // stale-while-revalidate: 缓存先即时展示, 仍入队后台静默重验
+      // (重验走服务端 24h 目录缓存, 重复探针近似 sqlite 命中, 不压源站)
       if (queue.length < 60) {
         queue.push(book);
       }

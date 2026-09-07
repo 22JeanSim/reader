@@ -63,7 +63,7 @@ export default function SettingsPage() {
                 className="w-24 rounded-md border border-border bg-background px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
               />
             </SettingRow>
-            <SettingRow label="隐藏无章节结果" value="后台校验目录, 解析 0 章的结果不展示(缓存 7 天)">
+            <SettingRow label="隐藏无章节结果" value="后台校验目录: 0 章隐藏; 缓存即时展示并静默重验, 章节更新自动跟上">
               <Switch
                 checked={hideEmptyTocResults}
                 onCheckedChange={setHideEmptyTocResults}
