@@ -111,7 +111,7 @@ legado 语义书源规则引擎, 从 Kotlin legacy 全量重构而来
 
 ```bash
 docker pull ghcr.io/hehecat/reader:latest
-docker run -d --name reader -p 4396:8080 \
+docker run -d --name reader -p 8080:8080 \
   -v "$PWD/storage:/storage/storage" \
   -e READER_APP_WORKDIR=/storage \
   -e READER_APP_SECURE=true \
@@ -120,7 +120,8 @@ docker run -d --name reader -p 4396:8080 \
   ghcr.io/hehecat/reader:latest
 ```
 
-镜像内置 camoufox 求解后端(pip 包 + Firefox 二进制), 反爬开箱即用。浏览器打开 `http://<host>:4396`。
+镜像内置 camoufox 求解后端(pip 包 + Firefox 二进制), 反爬开箱即用。
+容器自身同时服务前端静态与全部 API(单一来源), 浏览器打开 `http://<host>:8080` 即可, **无需任何反代**。
 
 ### 本地开发
 
@@ -136,25 +137,39 @@ cd frontend && pnpm install && pnpm dev
 
 ## 生产部署
 
-推荐拓扑(两级反代, 本仓库 `deploy/` 提供全部资产):
+### 通用场景(推荐)
+
+容器单端口直服(静态 + API 同源), 前面挂任意 TLS 反代即可:
 
 ```
-浏览器 ─HTTPS :8888─ 外层 caddy(TLS 通配证书, SSE 不压缩)
-       ─HTTP :8080── 宿主 caddy(静态 dist 长缓存 + /reader3 反代 flush -1)
-       ─4396→8080── reader 容器(warp API + SSE + sqlite + 内嵌 dist 兜底)
+浏览器 ─HTTPS 443─ 你的反代(caddy/nginx/traefik, 自备证书)
+       ─HTTP────── reader 容器 :8080 (静态 dist + /reader3 API + /assets 封面)
 ```
+
+compose 方式(`deploy/docker-compose.yml`, 端口可用 `READER_PORT` 改):
 
 ```bash
-cd deploy
-cp .env.example .env        # 填邀请码/管理密码
-GHCR_PAT=xxx ./pull-deploy.sh
+cd deploy && cp .env.example .env && docker compose up -d
 ```
 
-`pull-deploy.sh` 自动: 拉 GHCR 镜像 → 导出 dist 到 `deploy/web-dist`(宿主 caddy root) → 起 compose 容器 → 旧 /data volume 一次性迁移(`OLD_DATA_VOLUME=<名>`) → 清理旧手工容器。
+反代只有两条硬要求(SSE 流式搜索的性命):
 
-**caddy 三条硬要求**(见 `deploy/Caddyfile`): SSE 接口不压缩(gzip/zstd 会缓冲 event-stream) · `/reader3/*` 反代 `flush_interval -1` · 封面 `/assets/*/covers/*` 走后端且长缓存。
+1. **不要压缩 SSE**: 反代层对 `/reader3/searchBookMultiSSE`、`/reader3/searchBookSourceSSE` 关闭 gzip/zstd(压缩器会缓冲 event-stream, 表现为搜索永远 0 结果)。caddy: `@notsse not path /reader3/*SSE` + `encode @notsse gzip zstd`; nginx: 该 location `gzip off`
+2. **关闭该路径的代理缓冲**: caddy `reverse_proxy { flush_interval -1 }`; nginx `proxy_buffering off`
 
----
+其余路径(含 `/assets/*` 静态与封面)容器已自带合理缓存头, 反代透传即可。
+
+### 特殊场景: 本机家庭拓扑(作者自用, 仅供参考)
+
+家庭宽带无 80/443、通配证书挂在 **:8888**, 且希望静态资源由宿主 caddy 做长缓存并与 TTS 网关同域, 因此采用两级反代:
+
+```
+浏览器 ─HTTPS :8888─ 外层 caddy 容器(TLS 通配证书, SSE 不压缩)
+       ─HTTP :8080── 宿主 caddy(静态 deploy/web-dist 长缓存 + /reader3 反代 flush -1)
+       ─4396→8080── reader 容器(compose, READER_PORT=4396)
+```
+
+该拓扑的全部资产在 `deploy/`: `Caddyfile`(宿主活配置, 文件头有动机注释)、`pull-deploy.sh`(拉镜像 → 导出 dist 到 `deploy/web-dist` 供宿主 caddy → compose up → 旧 volume 迁移)。**通用部署不需要这两样**, 直接用上节 compose 即可。
 
 ## 环境变量
 
@@ -178,7 +193,8 @@ GHCR_PAT=xxx ./pull-deploy.sh
 backend/    Rust 后端: src/(api/service/parser/storage/model), .cargo/config.toml
             (reqwest_unstable flag), scripts/camoufox_solver.py, web-ui/public/fonts(epub)
 frontend/   React 前端: src/(pages/components/hooks/services), vite.config.ts(/reader3 代理)
-deploy/     docker-compose.yml · .env.example · Caddyfile(宿主活配置) · pull-deploy.sh
+deploy/     docker-compose.yml · .env.example · pull-deploy.sh
+            Caddyfile(作者家庭两级反代自用配置, 通用部署可忽略)
 Dockerfile  根上下文多阶段: pnpm build → cargo release → camoufox → 运行镜像
 .github/    workflows/build.yml: push main/tag → 构建推 GHCR(latest/main/sha/semver)
 ```

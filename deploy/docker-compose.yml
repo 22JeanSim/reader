@@ -7,7 +7,8 @@ services:
     image: ghcr.io/hehecat/reader:latest
     container_name: reader
     ports:
-      - "4396:8080"
+      # 通用默认 8080; 作者家庭拓扑用 .env 的 READER_PORT=4396 覆盖
+      - "${READER_PORT:-8080}:8080"
     volumes:
       # 用户数据/书架/缓存 sqlite 所在 (READER_APP_WORKDIR=/storage)
       - /home/reader/storage:/storage/storage

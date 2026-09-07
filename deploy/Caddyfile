@@ -2,7 +2,10 @@
 	admin off
 }
 
-# reader 生产宿主 caddy: 静态 dist(pull-deploy.sh 从 GHCR 镜像导出) + 同源反代后端 API.
+# ⚠ 作者家庭拓扑自用配置, 非通用必需: 家庭宽带无 80/443, 通配证书挂 :8888,
+# 静态 dist 由宿主 caddy 做长缓存并与 TTS 网关同域, 故有两级反代.
+# 通用部署: 容器单端口直服 + 任意 TLS 反代即可, 见 README「生产部署-通用场景」.
+# 本文件角色: 静态 dist(pull-deploy.sh 从 GHCR 镜像导出) + 同源反代后端 API.
 # 外层 TLS 站点块参考见文件尾注释; SSE 不压缩/flush -1/封面长缓存为硬要求.
 :8080 {
 	root * /home/hehecat/code/reader/deploy/web-dist
