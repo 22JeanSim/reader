@@ -3595,7 +3595,14 @@ async fn get_book_toc(
         if let Some(source) =
             resolve_book_source_for_url(&state, &namespace, &bs_early, &url_param).await
         {
-            if let Ok(resp) =
+            // 推导结果持久化于 book vars(tocUrl 键): 命中直接跳过书页抓取(每请求省 2-3s);
+            // 读-改-写保留搜索期 @put 的 intro 等变量, 不整行覆盖
+            let mut vars =
+                crate::parser::rule::load_book_vars(&namespace, &source.book_source_url, &url_param);
+            let cached_toc = vars.get("tocUrl").cloned().unwrap_or_default();
+            if !cached_toc.is_empty() && cached_toc != url_param {
+                toc_url = cached_toc;
+            } else if let Ok(resp) =
                 crate::service::book::fetch_url(&namespace, &url_param, &source).await
             {
                 let info = crate::service::book::analyze_book_info(
@@ -3608,7 +3615,14 @@ async fn get_book_toc(
                 );
                 if let Some(t) = info.toc_url {
                     if !t.is_empty() && t != url_param {
-                        toc_url = t;
+                        toc_url = t.clone();
+                        vars.insert("tocUrl".to_string(), t);
+                        crate::parser::rule::save_book_vars(
+                            &namespace,
+                            &source.book_source_url,
+                            &url_param,
+                            &vars,
+                        );
                     }
                 }
             }
