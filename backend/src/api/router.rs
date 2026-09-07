@@ -8440,6 +8440,9 @@ async fn search_book_multi_sse(
     let mut concurrent_count = params
         .get("concurrentCount")
         .and_then(|v| v.parse::<usize>().ok());
+    let body_json = body
+        .as_ref()
+        .and_then(|b| serde_json::from_slice::<serde_json::Value>(b).ok());
     if let Some(body) = body {
         if let Ok(json) = serde_json::from_slice::<serde_json::Value>(&body) {
             if let Some(v) = json.get("key").and_then(|v| v.as_str()) {

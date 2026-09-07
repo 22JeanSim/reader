@@ -581,7 +581,7 @@ pub async fn search_one_source(
             return Ok(books);
         }
     }
-    match search_one_source_impl(storage, ns, source, key, page).await {
+    match search_one_source_impl(storage, ns, source, key, page, timeout_secs).await {
         Ok(v) => {
             crate::service::health::clear_source_invalid(ns, &source.book_source_url);
             if !v.is_empty() {
@@ -608,6 +608,7 @@ async fn search_one_source_impl(
     source: &BookSource,
     key: &str,
     page: i64,
+    timeout_secs: u64,
 ) -> Result<Vec<SearchBook>> {
     let Some(search_url) = source.search_url.clone() else {
         return Ok(vec![]);
