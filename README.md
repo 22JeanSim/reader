@@ -185,6 +185,8 @@ cd deploy && cp .env.example .env && docker compose up -d
 | `READER_CAMOUFOX_URL` | - | 外置 camoufox 服务; 缺省容器内自 spawn |
 | `READER_BROWSER_FIRST` | 1 | 抓取优先经浏览器反检测; 0 恢复直连优先 |
 
+**运行时可调(无需重新构建)**: 设置页「搜索 → 单源搜索超时」(3-60s, 即时保存生效, 随每次搜索请求下发); 慢源站多时调高保召回, 想快速跳过慢源调低。
+
 ---
 
 ## 仓库结构
