@@ -64,8 +64,23 @@ export function BookCard({
   const [menuOpen, setMenuOpen] = React.useState(false);
 
   const unread = book.totalChapterNum - 1 - book.durChapterIndex;
+  const progressPct =
+    book.totalChapterNum > 0
+      ? Math.min(100, Math.round(((book.durChapterIndex + 1) / book.totalChapterNum) * 100))
+      : 0;
+  const progressBar =
+    book.totalChapterNum > 0 ? (
+      <div aria-hidden className="h-0.5 overflow-hidden rounded-full bg-border/60">
+        <div className="h-full bg-accent/70" style={{ width: `${progressPct}%` }} />
+      </div>
+    ) : null;
   const canMarkRead = book.totalChapterNum > 0 && unread > 0;
   const chapter = book.durChapterTitle?.trim();
+  /** 阅读进度文案: 读至章节名/序号 + 总章数; 未读开时退化为最新章节 */
+  const progressText =
+    book.totalChapterNum > 0
+      ? `读至 ${chapter || `第 ${book.durChapterIndex + 1} 章`} · 共 ${book.totalChapterNum} 章`
+      : (book.latestChapterTitle?.trim() ? `最新 ${book.latestChapterTitle.trim()}` : "");
   const intro = (book.customIntro ?? book.intro ?? "").trim();
   const groupNames = groups === undefined ? [] : bookGroupNames(book, groups);
 
@@ -187,6 +202,9 @@ export function BookCard({
           <p className="mt-1 truncate text-xs leading-4 text-muted-foreground">
             {meta.length > 0 ? meta : chapter || " "}
           </p>
+          {progressText.length > 0 ? (
+            <p className="mt-1 truncate text-xs leading-4 text-muted-foreground/80">{progressText}</p>
+          ) : null}
           {intro.length > 0 ? (
             <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
               {intro}
@@ -196,6 +214,9 @@ export function BookCard({
 
         {menu}
         {overlay}
+        {progressBar !== null ? (
+          <div className="pointer-events-none absolute inset-x-3 bottom-0">{progressBar}</div>
+        ) : null}
       </div>
     );
   }
@@ -237,6 +258,16 @@ export function BookCard({
           {book.author.trim()}
         </p>
       ) : null}
+
+      {progressText.length > 0 ? (
+        <p
+          title={progressText}
+          className="mt-0.5 min-w-0 truncate px-0.5 text-center text-xs text-muted-foreground/80"
+        >
+          {progressText}
+        </p>
+      ) : null}
+      {progressBar !== null ? <div className="mt-1.5 px-0.5">{progressBar}</div> : null}
 
       {overlay}
     </div>

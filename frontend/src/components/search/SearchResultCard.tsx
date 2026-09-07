@@ -126,6 +126,11 @@ export function SearchResultCard({
             " "
           )}
         </p>
+        {book.latestChapterTitle?.trim() ? (
+          <p className="mt-1 truncate text-xs text-muted-foreground/80">
+            最新 {book.latestChapterTitle.trim()}
+          </p>
+        ) : null}
         {intro.length > 0 ? (
           <p className={cn("mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground", grid && "sm:mt-2")}>
             <Highlight text={intro} keyword={keyword} />

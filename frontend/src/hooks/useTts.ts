@@ -239,7 +239,12 @@ export function useTts(options: UseTtsOptions): UseTtsResult {
     }
     return gatewayStatus?.auto ?? "";
   }, [provider, gatewayStatus]);
-  const gatewayVoices = useTtsGatewayVoices(gatewayUrl, resolvedEngine).data ?? EMPTY_GATEWAY_VOICES;
+  // edge-tts 音色仅保留中文(其余语言用不上, 列表精简): 按语音名前缀 zh- 过滤
+  const gatewayVoicesAll = useTtsGatewayVoices(gatewayUrl, resolvedEngine).data ?? EMPTY_GATEWAY_VOICES;
+  const gatewayVoices = useMemo(
+    () => gatewayVoicesAll.filter((v) => v.name.startsWith("zh-") || v.id.startsWith("zh-")),
+    [gatewayVoicesAll],
+  );
   const resolvedEngineName = useMemo(() => {
     if (resolvedEngine === "") {
       return "";

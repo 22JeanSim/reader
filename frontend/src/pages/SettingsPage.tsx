@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ReadingPreferencesCard } from "@/components/settings/ReadingPreferencesCard";
 import { TtsPreferencesCard } from "@/components/settings/TtsPreferencesCard";
 import { WebdavPanel } from "@/components/settings/WebdavPanel";
-import { PageIntro, SettingCard, SettingRow } from "@/components/ui";
+import { PageIntro, SettingCard, SettingRow , Switch} from "@/components/ui";
 import { getSystemInfo } from "@/services/auth";
 import { useSettingsStore } from "@/stores/settings-store";
 import { version as appVersion } from "../../package.json";
@@ -32,6 +32,8 @@ function formatUptime(totalSeconds: number): string {
 export default function SettingsPage() {
   const searchTimeout = useSettingsStore((state) => state.searchTimeout);
   const setSearchTimeout = useSettingsStore((state) => state.setSearchTimeout);
+  const hideEmptyTocResults = useSettingsStore((state) => state.hideEmptyTocResults);
+  const setHideEmptyTocResults = useSettingsStore((state) => state.setHideEmptyTocResults);
   const systemQuery = useQuery({
     queryKey: ["systemInfo"],
     queryFn: () => getSystemInfo(),
@@ -59,6 +61,13 @@ export default function SettingsPage() {
                 value={searchTimeout}
                 onChange={(event) => setSearchTimeout(Number(event.target.value))}
                 className="w-24 rounded-md border border-border bg-background px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+              />
+            </SettingRow>
+            <SettingRow label="隐藏无章节结果" value="后台校验目录, 解析 0 章的结果不展示(缓存 7 天)">
+              <Switch
+                checked={hideEmptyTocResults}
+                onCheckedChange={setHideEmptyTocResults}
+                aria-label="隐藏无章节结果"
               />
             </SettingRow>
           </SettingCard>

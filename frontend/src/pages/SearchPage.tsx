@@ -9,6 +9,8 @@ import { Button, EmptyState, PageIntro, Skeleton, Spinner, cn } from "@/componen
 import { useBookshelf } from "@/hooks/useBookshelf";
 import { useSearchHistory } from "@/hooks/useSearchHistory";
 import { useSearchSSE } from "@/hooks/useSearchSSE";
+import { useSettingsStore } from "@/stores/settings-store";
+import { getChapterList } from "@/services/book";
 import { humanizeError } from "@/lib/errors";
 import { getJSON, setJSON } from "@/lib/storage";
 import type { Book, SearchBook } from "@/types/api";
@@ -23,6 +25,22 @@ const GRID_CLASS =
   "grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-3 xl:grid-cols-4";
 
 /** 搜索页布局偏好键 (与书架 LAYOUT_KEY 独立) */
+/** 目录探针缓存键/TTL: 7 天内同书同源不重复探针 */
+const TOC_PROBE_KEY = "reader.tocprobe.v1";
+const TOC_PROBE_TTL_MS = 7 * 24 * 3600 * 1000;
+const tocProbeKey = (bookUrl: string, origin: string): string => `${bookUrl}|${origin}`;
+function loadTocProbeCache(): Record<string, { n: number; t: number }> {
+  try {
+    const raw = JSON.parse(localStorage.getItem(TOC_PROBE_KEY) ?? "{}") as Record<
+      string,
+      { n: number; t: number }
+    >;
+    return raw !== null && typeof raw === "object" ? raw : {};
+  } catch {
+    return {};
+  }
+}
+
 const SEARCH_LAYOUT_KEY = "reader.search.layout";
 type SearchLayout = "grid" | "list";
 
@@ -171,8 +189,91 @@ export default function SearchPage() {
     setDetailOpen(true);
   };
 
+  /** 隐藏无章节结果: 后台并发 3 探针校验目录, 0 章即隐藏; 探针缓存 7 天 */
+  const hideEmptyToc = useSettingsStore((state) => state.hideEmptyTocResults);
+  const [emptyTocKeys, setEmptyTocKeys] = useState<ReadonlySet<string>>(() => new Set());
+  const tocProbeCache = useRef<Record<string, { n: number; t: number }> | null>(null);
+  if (tocProbeCache.current === null) {
+    tocProbeCache.current = loadTocProbeCache();
+  }
+  useEffect(() => {
+    if (!hideEmptyToc) {
+      setEmptyTocKeys(new Set());
+      return;
+    }
+    const cache = tocProbeCache.current ?? {};
+    const now = Date.now();
+    const cachedEmpty = new Set<string>();
+    const queue: SearchBook[] = [];
+    for (const book of results) {
+      const key = tocProbeKey(book.bookUrl, book.origin);
+      const hit = cache[key];
+      if (hit !== undefined && now - hit.t < TOC_PROBE_TTL_MS) {
+        if (hit.n === 0) {
+          cachedEmpty.add(key);
+        }
+        continue;
+      }
+      if (queue.length < 60) {
+        queue.push(book);
+      }
+    }
+    setEmptyTocKeys(cachedEmpty);
+    if (queue.length === 0) {
+      return;
+    }
+    let cancelled = false;
+    let cursor = 0;
+    let active = 0;
+    const pump = (): void => {
+      if (cancelled) {
+        return;
+      }
+      while (active < 3 && cursor < queue.length) {
+        const book = queue[cursor];
+        cursor += 1;
+        if (book === undefined) {
+          continue;
+        }
+        const key = tocProbeKey(book.bookUrl, book.origin);
+        active += 1;
+        void getChapterList(book.bookUrl, false, { bookSourceUrl: book.origin })
+          .then((chapters) => {
+            if (cancelled) {
+              return;
+            }
+            cache[key] = { n: chapters.length, t: Date.now() };
+            if (chapters.length === 0) {
+              setEmptyTocKeys((prev) => (prev.has(key) ? prev : new Set([...prev, key])));
+            }
+          })
+          .catch(() => undefined)
+          .finally(() => {
+            active -= 1;
+            try {
+              localStorage.setItem(TOC_PROBE_KEY, JSON.stringify(cache));
+            } catch {
+              /* 配额满忽略 */
+            }
+            pump();
+          });
+      }
+    };
+    pump();
+    return () => {
+      cancelled = true;
+    };
+  }, [results, hideEmptyToc]);
+  const visibleResults = useMemo(
+    () =>
+      hideEmptyToc
+        ? results.filter((book) => !emptyTocKeys.has(tocProbeKey(book.bookUrl, book.origin)))
+        : results,
+    [results, emptyTocKeys, hideEmptyToc],
+  );
+
   const initial = q.length === 0 && !searching && results.length === 0 && error === null;
-  const showResults = results.length > 0;
+  const showResults = visibleResults.length > 0;
   // q 就绪但搜索还没发起(发起在绘制后的 effect 里): 这一帧继续按加载中渲染,
   // 否则会闪一下「没有找到相关书籍」, 骨架也断一拍; 快照恢复的结果不算 pending.
   const pendingStart = q.length > 0 && !searching && startedKey !== q && results.length === 0;
@@ -263,7 +364,7 @@ export default function SearchPage() {
                 aria-live="polite"
               >
                 <Spinner size="sm" label="搜索中" />
-                <span>已找到 {results.length} 本</span>
+                <span>已找到 {visibleResults.length} 本</span>
                 {progress !== null ? (
                   <span>
                     ·{" "}
@@ -287,7 +388,7 @@ export default function SearchPage() {
 
             {showResults ? (
               <div className={layout === "grid" ? GRID_CLASS : "flex flex-col gap-2"}>
-                {results.map((book) => (
+                {visibleResults.map((book) => (
                   <SearchResultCard
                     layout={layout}
                     key={`${book.bookUrl}|${book.origin}`}
@@ -334,10 +435,10 @@ export default function SearchPage() {
               <div className="mt-3 flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border py-3">
                 <span className="text-xs text-muted-foreground">
                   {error !== null
-                    ? `搜索中断, 已找到 ${results.length} 本`
+                    ? `搜索中断, 已找到 ${visibleResults.length} 本`
                     : stopped
-                      ? `已停止 · 共找到 ${results.length} 本`
-                      : `共找到 ${results.length} 本`}
+                      ? `已停止 · 共找到 ${visibleResults.length} 本`
+                      : `共找到 ${visibleResults.length} 本`}
                 </span>
                 <div className="flex gap-2">
                   {error !== null ? (
