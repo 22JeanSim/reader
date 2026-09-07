@@ -1,0 +1,49 @@
+{
+	admin off
+}
+
+# reader 生产宿主 caddy: 静态 dist(pull-deploy.sh 从 GHCR 镜像导出) + 同源反代后端 API.
+# 外层 TLS 站点块参考见文件尾注释; SSE 不压缩/flush -1/封面长缓存为硬要求.
+:8080 {
+	root * /home/hehecat/code/reader/deploy/web-dist
+	# SSE 流式接口禁止压缩: gzip/zstd 缓冲 event-stream 致搜索流卡死(浏览器必带 Accept-Encoding)
+	@notsse not path /reader3/searchBookMultiSSE /reader3/searchBookSourceSSE
+	encode @notsse gzip zstd
+
+	# SSE 流式接口禁用缓冲
+	handle /reader3/* {
+		reverse_proxy 127.0.0.1:4396 {
+			flush_interval -1
+		}
+	}
+
+	# TTS 网关同源代理: 前端默认空地址走 /tts-gateway/*, 跨设备/https 混合内容都不踩坑
+	handle_path /tts-gateway/* {
+		reverse_proxy 127.0.0.1:9912
+	}
+
+
+	# 后端图片代理 (https 页的 http 图床走此路, 磁盘缓存+防盗链); 须先于静态 /assets/* 匹配
+	handle /assets/proxy {
+		reverse_proxy 127.0.0.1:4396
+	}
+	handle /assets/*/covers/* {
+		# 文件名即 md5 哈希, 内容变即名变 → 长缓存安全; 书架重复打开零下载
+		# 先删后端自带的 30d 头再设, 避免双 Cache-Control
+		header -Cache-Control
+		header Cache-Control "public, max-age=31536000, immutable"
+		reverse_proxy 127.0.0.1:4396
+	}
+	# 哈希资源长缓存 (文件名含 hash, 内容变即名变)
+	handle /assets/* {
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# SPA history 路由回退; 入口 index.html 每次协商校验, 发版即时生效
+	handle {
+		try_files {path} /index.html
+		header Cache-Control "no-cache"
+		file_server
+	}
+}

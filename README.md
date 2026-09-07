@@ -25,7 +25,7 @@
 backend/    Rust 后端 (src/, Cargo.toml, .cargo/config.toml 含 reqwest_unstable flag,
             scripts/camoufox_solver.py, web-ui/public/fonts 仅 epub 字体)
 frontend/   React 前端 (vite + pnpm, /reader3 同源代理见 vite.config.ts)
-deploy/     docker-compose.yml / .env.example / Caddyfile.example / pull-deploy.sh
+deploy/     docker-compose.yml / .env.example / Caddyfile(宿主活配置) / pull-deploy.sh
 Dockerfile  根上下文多阶段: frontend pnpm build → rust release → camoufox → 运行镜像
 .github/    Actions: push main/tag → 构建镜像推 GHCR
 ```
@@ -55,7 +55,7 @@ GitHub Actions 在 push main / tag `v*` 时自动构建并推送:
    `echo $PAT | docker login ghcr.io -u <user> --password-stdin`
 2. `cd deploy && cp .env.example .env` 填邀请码/管理密码
 3. `./pull-deploy.sh` — 拉镜像、导出 dist 到 `deploy/web-dist`(宿主 caddy root)、起容器 4396
-4. 宿主 caddy 按 `Caddyfile.example` 配置 (SSE 不压缩 + flush -1 + 封面长缓存是硬要求)
+4. 宿主 caddy 用 `deploy/Caddyfile` (root 指向 deploy/web-dist; SSE 不压缩 + flush -1 + 封面长缓存是硬要求)
 5. 旧部署迁移: `OLD_DATA_VOLUME=<旧匿名volume名> ./pull-deploy.sh` 自动搬 /data;
    storage 目录直接复用原 bind 路径
 

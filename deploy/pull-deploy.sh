@@ -33,6 +33,12 @@ if [ -n "$OLD_DATA_VOLUME" ]; then
   fi
 fi
 
+# 旧手工 docker run 的 reader 容器与 compose 的 container_name 冲突: 先停删
+if docker ps -a --format '{{.Names}}' | grep -qx 'reader'; then
+  echo "移除旧手工 reader 容器"
+  docker stop reader >/dev/null && docker rm reader >/dev/null
+fi
+
 docker compose up -d
 docker compose ps
 echo "部署完成: 4396 -> 容器 8080; 宿主 caddy root 指向 $(pwd)/web-dist"
