@@ -20,6 +20,8 @@ services:
       READER_APP_WEB_ROOT: /app/web-ui/dist
       # 书源抓取允许内网地址 (本地书同步/TTS 网关等)
       SSRF_ALLOW_PRIVATE: "true"
+      # 搜索/抓取重试 2→1: 死源单窗排空 45s→16s (配合搜索 8s 单次超时)
+      READER_HTTP_RETRIES: "1"
       READER_BROWSER_FIRST: "0"
       # secure 模式开关 (登录/书源权限校验)
       READER_APP_SECURE: "true"

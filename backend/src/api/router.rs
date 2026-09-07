@@ -8379,10 +8379,10 @@ async fn explore_book(
     }
 }
 
-/// SSE 并发数生效值：缺省 24（对齐 legacy searchBookMultiSSE concurrentCount 默认），
+/// SSE 并发数生效值：缺省 64（新关键词首结果时延=首窗排空速度，并发翻倍减半），
 /// 显式传值 clamp 到 1..=128（防止客户端传超大值打爆连接数）
 fn effective_concurrent_count(v: Option<usize>) -> usize {
-    v.unwrap_or(32).clamp(1, 128)
+    v.unwrap_or(64).clamp(1, 128)
 }
 
 /// GET/POST /reader3/searchBookMultiSSE：多书源流式搜索（SSE）
