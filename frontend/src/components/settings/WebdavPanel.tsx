@@ -32,8 +32,6 @@ import {
   cn,
   toast,
   Tooltip,
-  TooltipContent,
-  TooltipTrigger,
 } from "@/components/ui";
 import {
   downloadWebdavFile,
@@ -243,17 +241,24 @@ export function WebdavPanel() {
         <code className="w-fit max-w-full truncate rounded bg-surface-muted px-1 py-0.5 text-foreground">
           {window.location.origin}/reader3/webdav/
         </code>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button type="button" aria-label="WebDAV 使用说明" className="shrink-0 cursor-help outline-none focus-visible:ring-2 focus-visible:ring-accent/60">
-              <CircleAlert aria-hidden className="size-3.5 text-muted-foreground/80" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="max-w-64 text-xs leading-5">
-            一键备份写入根目录 legado/backup-&lt;时间戳&gt;.zip, 不覆盖旧备份.
-            认证 = HTTP Basic: 用户名=登录名, 密码=登录密码. secure 模式每人仅自己的空间(需
-            WebDAV 权限); 非 secure 单 default 空间免认证. 地址同源动态, 随访问域名变化.
-          </TooltipContent>
+        <Tooltip
+          side="bottom"
+          contentClassName="max-w-64 text-xs leading-5"
+          content={
+            <>
+              一键备份写入根目录 legado/backup-&lt;时间戳&gt;.zip, 不覆盖旧备份. 认证 = HTTP
+              Basic: 用户名=登录名, 密码=登录密码. secure 模式每人仅自己的空间(需 WebDAV
+              权限); 非 secure 单 default 空间免认证. 地址同源动态, 随访问域名变化.
+            </>
+          }
+        >
+          <button
+            type="button"
+            aria-label="WebDAV 使用说明"
+            className="shrink-0 cursor-help outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+          >
+            <CircleAlert aria-hidden className="size-3.5 text-muted-foreground/80" />
+          </button>
         </Tooltip>
       </div>
 
