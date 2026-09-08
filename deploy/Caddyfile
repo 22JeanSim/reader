@@ -35,6 +35,12 @@
 		# (caddy header 指令与上游头组合语义不可靠: 删+设=全丢, 单设=双头, 实测结论)
 		reverse_proxy 127.0.0.1:4396
 	}
+	# 本地字体子集静态 (名固定, 长缓存)
+	handle /fonts/* {
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
 	# 哈希资源长缓存 (文件名含 hash, 内容变即名变)
 	handle /assets/* {
 		header Cache-Control "public, max-age=31536000, immutable"
