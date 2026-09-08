@@ -12,12 +12,21 @@
     <meta name="renderer" content="webkit" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fcfaf6" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#171310" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- 字体走国内镜像(fonts.loli.net), 且非阻塞加载: 镜像再慢/被墙也不卡首屏, 缺失时回退系统字体栈 -->
+    <link rel="preconnect" href="https://fonts.loli.net" />
+    <link rel="preconnect" href="https://gstatic.loli.net" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap"
-      rel="stylesheet"
+      href="https://fonts.loli.net/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap"
+      rel="preload"
+      as="style"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
+    <noscript>
+      <link
+        href="https://fonts.loli.net/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
     <title>砚台 · 在线小说阅读</title>
     <style>
       :root {
