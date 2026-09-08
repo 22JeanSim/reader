@@ -186,11 +186,6 @@ export const TtsBar = React.memo(function TtsBar({ tts }: TtsBarProps) {
                 title={engine.available ? undefined : engine.reason || engine.setup}
               >
                 <span className="truncate">{engine.name}</span>
-                {typeof engine.rtf === "number" ? (
-                  <span className="ml-1.5 text-xs text-muted-foreground">
-                    实测 {engine.rtf}x 实时{engine.rtf > 1 ? "·连读需等待" : ""}
-                  </span>
-                ) : null}
               </SelectItem>
             ))}
             {providerInEngines ? null : (

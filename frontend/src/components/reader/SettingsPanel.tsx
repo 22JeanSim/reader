@@ -218,7 +218,7 @@ function TtsSourceRow({
 /**
  * TTS 引擎配置 (阅读器设置面板与设置页「阅读偏好」卡共用):
  * 网关地址输入 + /engines 能力清单 —— kind 徽标 (自建/免费云/密钥云)、可用圆点、
- * 不可用原因与 setup 配置提示、kokoro 实测 rtf 徽标; 行可点选切换音源 (auto 行旁注解析结果),
+ * 不可用原因与 setup 配置提示; 行可点选切换音源 (auto 行旁注解析结果),
  * 可用引擎带短文本合成「测试」按钮; 带 config_fields 的引擎另有「配置」按钮 →
  * EngineConfigDialog (v3: 密钥/端点/模板直接在前端修改、保存并真实合成验证).
  * 音源为「自定义模板」时展开模板控件; 网关不可达静默降级为行内提示, 不弹 toast.
@@ -328,11 +328,7 @@ export function TtsEngineControls() {
             <Badge size="sm" variant="outline">
               {ENGINE_KIND_LABEL[engine.kind]}
             </Badge>
-            {typeof engine.rtf === "number" ? (
-              <Badge size="sm" variant={engine.rtf > 1 ? "muted" : "accent"}>
-                实测 {engine.rtf}x 实时{engine.rtf > 1 ? "·连读需等待" : ""}
-              </Badge>
-            ) : null}
+
           </TtsSourceRow>
         ))}
 
