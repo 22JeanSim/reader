@@ -39,11 +39,12 @@ legado 语义书源规则引擎
 ```bash
 git clone https://github.com/hehecat/reader.git
 cd reader/deploy
-cp .env.example .env          # 可不改, 默认单用户模式
-docker compose up -d
+docker compose up -d          # 默认单用户模式, 无需 .env
 ```
 
-打开 `http://<机器IP>:8080`。
+打开 `http://<机器IP>:8080` 直接注册/登录。
+> 多用户: `cp .env.example .env` 设 `READER_APP_SECURE=true` 与邀请码/管理密码后 `docker compose up -d`。
+> 端口占用: `.env` 设 `READER_PORT=<其他>` 或在环境变量里传。
 
 > 不用 compose 也行:
 > ```bash

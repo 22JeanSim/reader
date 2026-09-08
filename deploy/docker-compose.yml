@@ -1,31 +1,32 @@
 # reader 生产 compose: 镜像来自 GHCR (GitHub Actions 构建推送)
-# 部署: cd deploy && GHCR_PAT=xxx ./pull-deploy.sh
+# 快速起: cd deploy && docker compose up -d   (无需 .env, 默认单用户)
+# 多用户: 复制 .env.example 为 .env, 设 READER_APP_SECURE=true 与邀请码/管理密码
 name: reader
 
 services:
   reader:
     image: ghcr.io/hehecat/reader:latest
-    container_name: reader
     ports:
-      # 通用默认 8080; 作者家庭拓扑用 .env 的 READER_PORT=4396 覆盖
+      # 容器内固定 8080; 宿主端口可用 .env 的 READER_PORT 覆盖
       - "${READER_PORT:-8080}:8080"
     volumes:
-      # 用户数据/书架/缓存 sqlite 所在 (READER_APP_WORKDIR=/storage)
+      # 用户数据/书架/缓存 sqlite (compose 自动创建)
       - ./storage:/storage/storage
-      # 容器内 /data (mongo 遗留/杂项), 命名 volume 便于备份
+      # 容器内 /data (杂项), 命名 volume 便于备份
       - data:/data
-    env_file: .env
     environment:
       READER_APP_WORKDIR: /storage
       READER_APP_WEB_ROOT: /app/web-ui/dist
-      # 书源抓取允许内网地址 (本地书同步/TTS 网关等)
+      # 书源抓取允许内网地址 (本地书同步等)
       SSRF_ALLOW_PRIVATE: "true"
-      # 搜索/抓取重试 2→1: 死源单窗排空 45s→16s (配合搜索 8s 单次超时)
       # 搜索抓取重试次数(死源排空速度); 源站普遍慢时可下调
       READER_HTTP_RETRIES: "1"
       READER_BROWSER_FIRST: "0"
-      # secure 模式开关 (登录/书源权限校验)
-      READER_APP_SECURE: "true"
+      # 多用户开关: 默认单用户; .env 设 true 开启邀请码注册
+      READER_APP_SECURE: "${READER_APP_SECURE:-false}"
+      # secure 模式必填(可经 .env 覆盖): 注册邀请码 / 管理密码
+      READER_APP_INVITECODE: "${READER_APP_INVITECODE:-}"
+      READER_APP_SECUREKEY: "${READER_APP_SECUREKEY:-}"
       TZ: Asia/Shanghai
     restart: unless-stopped
 
