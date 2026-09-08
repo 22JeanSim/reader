@@ -126,7 +126,8 @@ export async function exploreBook(
   const data = await get<unknown>(
     "/exploreBook",
     {
-      bookSourceUrl: query.bookSourceUrl,
+      // 后端 explore 参数名为 bookSource (与单源搜索一致); 历史误发 bookSourceUrl 致书海全空
+      bookSource: query.bookSourceUrl,
       ruleFindUrl: query.ruleFindUrl,
       page: query.page ?? 1,
     },
