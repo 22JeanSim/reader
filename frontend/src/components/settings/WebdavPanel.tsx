@@ -242,10 +242,17 @@ export function WebdavPanel() {
           时间戳命名不覆盖旧备份, 免配置.
         </li>
         <li className="flex flex-col gap-1">
-          <span>阅读 App 填 WebDAV 地址, 用当前账号登录:</span>
+          <span>
+            阅读 App / WebDAV 客户端填下面的地址; 地址为**同源动态**(随各人访问的域名/IP
+            变化, 非固定个人地址):
+          </span>
           <code className="w-fit max-w-full truncate rounded bg-surface-muted px-1 py-0.5 text-foreground">
             {window.location.origin}/reader3/webdav/
           </code>
+        </li>
+        <li>
+          认证 = HTTP Basic: 用户名 = 登录名, 密码 = 登录密码(无需另设);
+          secure 模式下每人只能访问自己的空间(需具备 WebDAV 权限), 非 secure 为单 default 空间免认证.
         </li>
       </ul>
 
