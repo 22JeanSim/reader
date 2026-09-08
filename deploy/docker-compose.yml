@@ -22,6 +22,8 @@ services:
       SSRF_ALLOW_PRIVATE: "true"
       # 搜索/抓取重试 2→1: 死源单窗排空 45s→16s (配合搜索 8s 单次超时)
       READER_HTTP_RETRIES: "1"
+      # 关闭启动前 db 自动快照 (用户明确不需要备份; WebDAV 03:00 zip 备份仍开)
+      READER_DB_BACKUP: "0"
       READER_BROWSER_FIRST: "0"
       # secure 模式开关 (登录/书源权限校验)
       READER_APP_SECURE: "true"
