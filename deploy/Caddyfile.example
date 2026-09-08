@@ -1,0 +1,27 @@
+# 可选: 自建 TLS 反代示例 (容器自身已能单端口直服, 反代仅为 HTTPS/缓存/同域 TTS)
+# 两条硬要求(SSE 流式搜索的性命):
+#   1. SSE 路径不压缩 (压缩器缓冲 event-stream → 搜索永远 0 结果)
+#   2. SSE 路径关代理缓冲 (caddy flush_interval -1 / nginx proxy_buffering off)
+{
+	admin off
+}
+
+reader.example.com:443 {
+	tls /path/to/fullchain.pem /path/to/privkey.pem   # 或 tls your@email.com 自动签
+	encode zstd gzip
+
+	# 同源 TTS 网关代理(可选, 见 deploy/tts-gateway.py)
+	handle_path /tts-gateway/* {
+		reverse_proxy 127.0.0.1:9912
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:8080 {
+			flush_interval -1
+		}
+	}
+	# 若按路径细分, 对 SSE 单独关压缩:
+	# handle /reader3/searchBookMultiSSE {
+	#     reverse_proxy 127.0.0.1:8080 { flush_interval -1 }
+	# }
+}

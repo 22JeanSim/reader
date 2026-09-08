@@ -7,3 +7,5 @@ frontend/dist/
 deploy/.env
 deploy/web-dist/
 *.log
+docker-compose.override.yml
+deploy/Caddyfile.local
