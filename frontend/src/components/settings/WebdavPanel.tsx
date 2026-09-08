@@ -31,7 +31,7 @@ import {
   SkeletonList,
   cn,
   toast,
-} from "@/components/ui";
+, Tooltip, TooltipTrigger, TooltipContent} from "@/components/ui";
 import {
   downloadWebdavFile,
   type WebdavFile,
@@ -236,25 +236,23 @@ export function WebdavPanel() {
         </div>
       </header>
 
-      <ul className="flex flex-col gap-1.5 text-xs leading-5 text-muted-foreground">
-        <li>
-          一键备份写入 WebDAV 根目录的 legado/backup-&lt;UTC 时间戳&gt;.zip,
-          时间戳命名不覆盖旧备份, 免配置.
-        </li>
-        <li className="flex flex-col gap-1">
-          <span>
-            阅读 App / WebDAV 客户端填下面的地址; 地址为**同源动态**(随各人访问的域名/IP
-            变化, 非固定个人地址):
-          </span>
-          <code className="w-fit max-w-full truncate rounded bg-surface-muted px-1 py-0.5 text-foreground">
-            {window.location.origin}/reader3/webdav/
-          </code>
-        </li>
-        <li>
-          认证 = HTTP Basic: 用户名 = 登录名, 密码 = 登录密码(无需另设);
-          secure 模式下每人只能访问自己的空间(需具备 WebDAV 权限), 非 secure 为单 default 空间免认证.
-        </li>
-      </ul>
+      <div className="flex items-center gap-2 text-xs leading-5 text-muted-foreground">
+        <code className="w-fit max-w-full truncate rounded bg-surface-muted px-1 py-0.5 text-foreground">
+          {window.location.origin}/reader3/webdav/
+        </code>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button type="button" aria-label="WebDAV 使用说明" className="shrink-0 cursor-help outline-none focus-visible:ring-2 focus-visible:ring-accent/60">
+              <CircleAlert aria-hidden className="size-3.5 text-muted-foreground/80" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-64 text-xs leading-5">
+            一键备份写入根目录 legado/backup-&lt;时间戳&gt;.zip, 不覆盖旧备份.
+            认证 = HTTP Basic: 用户名=登录名, 密码=登录密码. secure 模式每人仅自己的空间(需
+            WebDAV 权限); 非 secure 单 default 空间免认证. 地址同源动态, 随访问域名变化.
+          </TooltipContent>
+        </Tooltip>
+      </div>
 
       <input
         ref={fileInputRef}
