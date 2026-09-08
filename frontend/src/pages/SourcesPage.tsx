@@ -10,6 +10,13 @@ import {
   Upload,
 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Ellipsis } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui";
 import * as React from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -128,6 +135,15 @@ export default function SourcesPage() {
     [invalid.invalidSources],
   );
   const [statusFilter, setStatusFilter] = React.useState<"all" | "invalid" | "premium" | "poor">("all");
+  /** 失效口径 = 近期失效标记 ∪ 长期统计死源 (与筛选/清理按钮一致) */
+  const expiredCount = React.useMemo(
+    () =>
+      sources.filter(
+        (source) =>
+          invalidUrls.has(source.bookSourceUrl) || deadUrls.has(source.bookSourceUrl),
+      ).length,
+    [sources, invalidUrls, deadUrls],
+  );
   const [sortByConf, setSortByConf] = React.useState(false);
   const [selectMode, setSelectMode] = React.useState(false);
   const [selected, setSelected] = React.useState<ReadonlySet<string>>(new Set());
@@ -261,27 +277,73 @@ export default function SourcesPage() {
             >
               <RotateCw aria-hidden className={cn(isFetching && "ui-spin")} />
             </IconButton>
-            <Button size="sm" variant="secondary" onClick={() => navigate("/workbench")}>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="hidden sm:inline-flex"
+              onClick={() => navigate("/workbench")}
+            >
               <ToolCase aria-hidden />
               工作台
             </Button>
-            <Button size="sm" variant="secondary" onClick={checkInvalid}>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="hidden sm:inline-flex"
+              onClick={checkInvalid}
+            >
               <ShieldAlert aria-hidden />
               检测失效
             </Button>
             <Button
               size="sm"
               variant="secondary"
+              className="hidden sm:inline-flex"
               disabled={cleanupTargets.length === 0}
               onClick={() => setCleanupOpen(true)}
             >
               <Trash2 aria-hidden />
               清理失效源{cleanupTargets.length > 0 ? ` ${cleanupTargets.length}` : ""}
             </Button>
-            <Button size="sm" onClick={() => setImportOpen(true)}>
+            <Button
+              size="sm"
+              className="hidden sm:inline-flex"
+              onClick={() => setImportOpen(true)}
+            >
               <Download aria-hidden />
               导入
             </Button>
+            {/* 移动端: 导入(带文字主按钮) + 更多菜单(语义完整), 避免纯图标不可读 */}
+            <div className="flex items-center gap-2 sm:hidden">
+              <Button size="sm" onClick={() => setImportOpen(true)}>
+                <Download aria-hidden />
+                导入
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <IconButton variant="secondary" aria-label="更多操作">
+                    <Ellipsis aria-hidden />
+                  </IconButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => navigate("/workbench")}>
+                    <ToolCase aria-hidden />
+                    工作台
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={checkInvalid}>
+                    <ShieldAlert aria-hidden />
+                    检测失效
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={cleanupTargets.length === 0}
+                    onSelect={() => setCleanupOpen(true)}
+                  >
+                    <Trash2 aria-hidden />
+                    清理失效源{cleanupTargets.length > 0 ? ` ${cleanupTargets.length}` : ""}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </>
         }
       />
@@ -318,7 +380,7 @@ export default function SourcesPage() {
               {key === "all"
                 ? "全部"
                 : key === "invalid"
-                  ? `失效 ${invalid.invalidSources.length}`
+                  ? `失效 ${expiredCount}`
                   : key === "premium"
                     ? `精品 ${premiumSet.size}`
                     : `差 ${poorSet.size}`}
