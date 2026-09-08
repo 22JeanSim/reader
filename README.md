@@ -148,14 +148,10 @@ compose 默认挂 `deploy/storage/`(容器内 `/storage/storage`), 内含:
 
 **运行时可调(无需重启/重建)**: 设置页「搜索 → 单源搜索超时」(3-60s, 即时保存, 随每次搜索请求下发)。
 
-### 反代(可选)
+### 反代(通常不需要)
 
-容器单端口已能直服。加 TLS 反代时**两条硬要求**(SSE 流式搜索的性命):
-
-1. **SSE 路径不压缩**: 压缩器缓冲 event-stream → 搜索永远 0 结果。caddy: 对 `/reader3/searchBookMultiSSE`、`/reader3/searchBookSourceSSE` 排除 encode; nginx: 该 location `gzip off`
-2. **SSE 路径关代理缓冲**: caddy `reverse_proxy { flush_interval -1 }`; nginx `proxy_buffering off`
-
-参考配置见 `deploy/Caddyfile.example`。其余路径容器自带合理缓存头, 透传即可。
+默认**不需要任何反代**: 容器单端口直服前端与全部 API, 局域网/内网穿透直接用。
+仅当你需要 HTTPS(公网访问建议)时才自备反代, 届时注意两点: SSE 路径(`/reader3/*SSE`)不压缩、关代理缓冲, 否则搜索流式失效; 参考 `deploy/Caddyfile.example`。
 
 ---
 
@@ -171,7 +167,7 @@ python3 tts-gateway.py        # 默认 :9912, 配置 ~/.local/share/tts-gateway-
 ```
 
 - 引擎: edge-tts(免费云神经音, 中文音色内置筛选); 可配腾讯/阿里/火山等密钥云
-- 前端「设置 → 阅读偏好 → TTS」网关地址留空 = 走同源 `/tts-gateway` 代理(需反代配置该路径, 见 Caddyfile.example); 或填绝对地址 `http://<host>:9912`
+- 前端「设置 → 阅读偏好 → TTS」网关地址填 `http://<运行网关的机器IP>:9912`(无反代时直连); 若配了反代也可留空走同源 `/tts-gateway`
 - 不装网关: 朗读自动降级为浏览器系统语音
 
 ### camoufox(反爬求解)
